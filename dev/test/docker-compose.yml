@@ -1,0 +1,26 @@
+version: '2'
+services:
+  db:
+    image: mysql:8
+    command: --default-authentication-plugin=mysql_native_password
+    ports:
+      - 3309:3306
+    tmpfs: /var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: companion
+  auth:
+    image: ${ECR_URN}/${ECR_NAMESPACE}/service-auth-generic:2.6
+    depends_on:
+      - db
+    environment:
+      - API_TOKEN_INTERNAL=system@test-token:system/admin
+      - RDS_HOSTNAME=localhost
+      - RDS_USERNAME=root
+      - RDS_PASSWORD=password
+      - RDS_PORT=3309
+      - RDS_DATABASE=companion
+      - PORT=3310
+      - REDIS_URI=redis://redis:6589
+      - API_HOST=http://localhost:3310
+    network_mode: host

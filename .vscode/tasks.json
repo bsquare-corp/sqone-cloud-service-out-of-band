@@ -1,0 +1,43 @@
+{
+  // See https://go.microsoft.com/fwlink/?LinkId=733558
+  // for the documentation about the tasks.json format
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build",
+      "type": "shell",
+      "command": "yarn",
+      "args": ["build"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "test",
+      "type": "shell",
+      "command": "yarn",
+      "args": ["test"],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    // Assumes that the util-compose repo is in a folder named that next to this repo.
+    {
+      "label": "start",
+      "type": "shell",
+      "command": "source ../util-compose/test-env.sh && yarn start",
+      "isBackground": true,
+      "problemMatcher": [],
+      "dependsOn": ["build"],
+      "options": {
+        "env": {
+          "PORT": "5201"
+        }
+      }
+    }
+  ]
+}

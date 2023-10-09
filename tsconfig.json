@@ -1,0 +1,11 @@
+{
+  "extends": "@bsquare/eslint-config/tsconfig.lib.cjs.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "lib": ["es2020"],
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", ".#*", "*~"]
+}

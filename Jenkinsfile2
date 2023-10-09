@@ -1,0 +1,15 @@
+#!/usr/bin/env groovy
+
+@Library('pipeline-library') _
+
+/* To avoid confusion, the repo name will always be the same as the GIT repo name under the project,
+ * and the ECR registry for the repo will also be named the same.
+ */
+
+doDockerBuild {
+  yarnPublish = true
+  dockerPublish = true
+  templateDockerfile = com.bsquare.Yarn.createTemplateDockerfile()
+  templateTest = com.bsquare.Yarn.createTemplateTestFile()
+  dockerBuildVariants = ["aws", "onprem"]
+}
