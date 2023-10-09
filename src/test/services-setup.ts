@@ -97,8 +97,7 @@ export async function startServices(): Promise<void> {
       reject(new Error('Services failed to start within a reasonable time'));
     }, START_TIMEOUT);
 
-    console.log('Waiting for SQL to be ready');
-    servicesProcess.stdout.on('data', (data) => {
+    const listener = (data: Buffer): void => {
       if (
         data.toString().includes('Ready to accept connections') ||
         data.toString().includes('ready for connections')
@@ -109,7 +108,11 @@ export async function startServices(): Promise<void> {
         // Delay an extra second because ready for connections is a lie.
         setTimeout(resolve, 1000);
       }
-    });
+    };
+
+    console.log('Waiting for SQL to be ready');
+    servicesProcess.stdout.on('data', listener);
+    servicesProcess.stderr.on('data', listener);
   });
 
   console.log('Waiting for API_HOST');

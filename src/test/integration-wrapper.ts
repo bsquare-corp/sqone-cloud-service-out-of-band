@@ -52,12 +52,12 @@ process.env.PORT = originalPort;
 before(async () => {
   console.log('Starting temporary services...');
   await startServices();
-  console.log('Starting plugins system...');
+  console.log('Starting oob system...');
   await oobApi.start();
 });
 
 after(async () => {
-  console.log('Stopping plugins system...');
+  console.log('Stopping oob system...');
   await oobApi.stop(false);
   console.log('Stopping services...');
   await stopServices();
