@@ -8,7 +8,7 @@ import * as MySQL from 'mysql2/promise';
 import Fetch from 'node-fetch';
 import { RDS_DATABASE, RDS_HOSTNAME, RDS_PASSWORD, RDS_PORT, RDS_USERNAME } from '../config';
 
-const API_HOST = 'http://localhost:4468';
+const API_HOST = 'http://localhost:3310';
 
 export const MOCK_PORT = 4468;
 
