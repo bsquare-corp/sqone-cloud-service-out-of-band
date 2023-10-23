@@ -10,11 +10,11 @@ services:
       MYSQL_ROOT_PASSWORD: password
       MYSQL_DATABASE: companion
   auth:
-    image: ${ECR_URN}/${ECR_NAMESPACE}/service-auth-generic:2.6
+    image: ${ECR_URN}/${ECR_NAMESPACE}/service-auth-generic:latest
     depends_on:
       - db
     environment:
-      - API_TOKEN_INTERNAL=system@test-token:system/admin
+      - API_TOKEN_INTERNAL=system@test-token:system/admin,reg@test-token:registration
       - RDS_HOSTNAME=localhost
       - RDS_USERNAME=root
       - RDS_PASSWORD=password

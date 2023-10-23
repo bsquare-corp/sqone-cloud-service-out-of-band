@@ -77,6 +77,7 @@ export class OutOfBandServer extends NodeServer {
   }
 
   protected async configure(): Promise<void> {
+    // TODO Cron to ensure all assets still exist.
     await this.db.connect();
 
     const dispatchEvent: RaiseEventCallback = (event) => this.eventQueue.write(event);
@@ -94,6 +95,7 @@ export class OutOfBandServer extends NodeServer {
 }
 
 export async function initService(cloudInterface: CloudInterface): Promise<void> {
+  // TODO Consider listening for asset delete events.
   const eventQueue = await cloudInterface.initEventQueue();
   OutOfBandServer.run(eventQueue);
 }
