@@ -1,8 +1,8 @@
-FROM ${ECR_URN}/${ECR_NAMESPACE}/package-common-aws:2.4.0 as aws
+FROM ${ECR_URN}/${ECR_NAMESPACE}/package-common-aws:3.1.0 as aws
 ENV SERVICE_PATH=/service
 COPY --from=final /app /service
 
-FROM ${ECR_URN}/${ECR_NAMESPACE}/package-common-onprem:0.2.0 as onprem
+FROM ${ECR_URN}/${ECR_NAMESPACE}/package-common-onprem:0.4.0 as onprem
 ENV SERVICE_PATH=/service
 COPY --from=final /app /service
 

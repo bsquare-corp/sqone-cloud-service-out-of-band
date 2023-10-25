@@ -12,6 +12,8 @@ process.env.RDS_PASSWORD = 'password';
 process.env.RDS_PORT = '3309';
 process.env.RDS_DATABASE = 'companion';
 
+process.env.OOB_BUCKET = 'oob';
+
 import { PipelineEvent } from '@bsquare/companion-common';
 import { EventEmitter } from 'events';
 import { after, before } from 'mocha';
@@ -40,13 +42,38 @@ export async function waitForEvents(count: number): Promise<Array<PipelineEvent<
 
 const originalPort = process.env.PORT;
 process.env.PORT = String(OOB_API_PORT);
-export const oobApi = OutOfBandServer.createDummy({
-  write: (event) => {
-    serviceEvents.emit('event', event);
-    return Promise.resolve();
+export const oobApi = OutOfBandServer.createDummy(
+  {
+    write: (event) => {
+      serviceEvents.emit('event', event);
+      return Promise.resolve();
+    },
+    close: () => Promise.resolve(),
   },
-  close: () => Promise.resolve(),
-});
+  {
+    getFileLink: (fileId: string) => Promise.resolve(`https://s3/${fileId}`),
+    getFileUploadLink: (fileId: string) => Promise.resolve(`https://s3/${fileId}`),
+    startUpload: () => {
+      throw new Error('not implemented');
+    },
+    createPart: () => {
+      throw new Error('not implemented');
+    },
+    completeUpload: () => {
+      throw new Error('not implemented');
+    },
+    abortUpload: () => {
+      throw new Error('not implemented');
+    },
+    deleteFile: () => {
+      throw new Error('not implemented');
+    },
+    uploadStream: () => {
+      throw new Error('not implemented');
+    },
+    close: () => Promise.resolve(),
+  },
+);
 process.env.PORT = originalPort;
 
 before(async () => {

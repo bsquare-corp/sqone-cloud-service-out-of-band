@@ -211,22 +211,21 @@
   resolved "https://bsquare-753989949864.d.codeartifact.us-west-2.amazonaws.com/npm/bsquare/@bsquare/companion-common/-/companion-common-5.35.2.tgz#0606ef28adb2dd258a2418c0de7981a2452a9f82"
   integrity sha512-n3FdrYgqLgbAIWo+fR89StKwpo1LkM5okUGZMkVcbOycAAjj77AUrvW1U6DiysDC8Qn5Ea7KJLWcDteEvPQgOw==
 
-"@bsquare/companion-common@^5.37.0":
-  version "5.37.0"
-  resolved "https://bsquare-753989949864.d.codeartifact.us-west-2.amazonaws.com/npm/bsquare/@bsquare/companion-common/-/companion-common-5.37.0.tgz#bb367f8f07e5c9f08560bfb6259e62b17e199afb"
-  integrity sha512-hrz6bzIzj+dEgQ6PH0ir7gyK2VyfVcHqMtDiqWMprU2z9U5ZQMS10yK69AdJSJiFr4UuUtHdufn1HiezdzUviA==
+"@bsquare/companion-common@^5.37.1":
+  version "5.37.1"
+  resolved "https://bsquare-753989949864.d.codeartifact.us-west-2.amazonaws.com/npm/bsquare/@bsquare/companion-common/-/companion-common-5.37.1.tgz#a4c758751fb6e968ff3570d721fc4c61bde39cad"
+  integrity sha512-LlGgSP5PPn6DA8eR+W6dNIEmSwJ3EBXfDuvHaYRjyPBCoxA0y7QqhO8sn2wC8LaTnkTWxPsHveIl31o0lPVfcA==
 
-"@bsquare/companion-service-common@^5.1.3":
-  version "5.1.3"
-  resolved "https://bsquare-753989949864.d.codeartifact.us-west-2.amazonaws.com/npm/bsquare/@bsquare/companion-service-common/-/companion-service-common-5.1.3.tgz#acb57ba3087b5385892beb438497ad8f9384eb53"
-  integrity sha512-UbKLGXxvTK/einWXro5idNgDlza3ETxvOCQlf99qb2XDeOroaAeN05rxU/WocnJZjkCODtqj4Xlvwmjdc1wv+w==
+"@bsquare/companion-service-common@^5.3.0":
+  version "5.3.0"
+  resolved "https://bsquare-753989949864.d.codeartifact.us-west-2.amazonaws.com/npm/bsquare/@bsquare/companion-service-common/-/companion-service-common-5.3.0.tgz#80584083494f101dca5916be5bbe06c3e668eb23"
+  integrity sha512-VXh7rlfj9ZN4n8RX5vUAQze3Wz3PNc+9iDnZqlxm0CK3z1XpfhM0Gd9RHlACH7gnnQCOGJa66aVFVbHMtiuo0A==
   dependencies:
     "@bsquare/companion-common" "^5.22.0"
     "@bsquare/expiry-map" "1.3.0"
     "@types/ws" "7.4.2"
     abort-controller "^3.0.0"
-    bcrypt "^5.0.1"
-    chai "^4.3.7"
+    bcrypt "^5.1.1"
     dataloader "2.0.0"
     eta "^2.0.0"
     express "^4.17.1"
@@ -848,7 +847,7 @@ balanced-match@^1.0.0:
   resolved "https://bsquare-753989949864.d.codeartifact.us-west-2.amazonaws.com/npm/bsquare/balanced-match/-/balanced-match-1.0.2.tgz#e83e3a7e3f300b34cb9d87f615fa0cbf357690ee"
   integrity sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==
 
-bcrypt@^5.0.1:
+bcrypt@^5.1.1:
   version "5.1.1"
   resolved "https://bsquare-753989949864.d.codeartifact.us-west-2.amazonaws.com/npm/bsquare/bcrypt/-/bcrypt-5.1.1.tgz#0f732c6dcb4e12e5b70a25e326a72965879ba6e2"
   integrity sha512-AGBHOG5hPYZ5Xl9KXzU5iKq9516yEmvCKDg3ecP5kX2aB6UqTeXZxk2ELnDgDm6BQSMlLt9rDB4LoSMx0rYwww==
@@ -1004,19 +1003,6 @@ chai@4.2.0:
     pathval "^1.1.0"
     type-detect "^4.0.5"
 
-chai@^4.3.7:
-  version "4.3.10"
-  resolved "https://bsquare-753989949864.d.codeartifact.us-west-2.amazonaws.com/npm/bsquare/chai/-/chai-4.3.10.tgz#d784cec635e3b7e2ffb66446a63b4e33bd390384"
-  integrity sha512-0UXG04VuVbruMUYbJ6JctvH0YnC/4q3/AkT18q4NaITo91CUm0liMS9VqzT9vZhVQ/1eqPanMWjBM+Juhfb/9g==
-  dependencies:
-    assertion-error "^1.1.0"
-    check-error "^1.0.3"
-    deep-eql "^4.1.3"
-    get-func-name "^2.0.2"
-    loupe "^2.3.6"
-    pathval "^1.1.1"
-    type-detect "^4.0.8"
-
 chalk@^2.4.2:
   version "2.4.2"
   resolved "https://bsquare-753989949864.d.codeartifact.us-west-2.amazonaws.com/npm/bsquare/chalk/-/chalk-2.4.2.tgz#cd42541677a54333cf541a49108c1432b44c9424"
@@ -1034,7 +1020,7 @@ chalk@^4.0.0, chalk@^4.1.0:
     ansi-styles "^4.1.0"
     supports-color "^7.1.0"
 
-check-error@^1.0.2, check-error@^1.0.3:
+check-error@^1.0.2:
   version "1.0.3"
   resolved "https://bsquare-753989949864.d.codeartifact.us-west-2.amazonaws.com/npm/bsquare/check-error/-/check-error-1.0.3.tgz#a6502e4312a7ee969f646e83bb3ddd56281bd694"
   integrity sha512-iKEoDYaRmd1mxM90a2OEfWhjsjPpYPuQ+lMYsoxB126+t8fw7ySEO48nmDg5COTjxDI65/Y2OWpeEHk3ZOe8zg==
@@ -1239,13 +1225,6 @@ deep-eql@^3.0.1:
   version "3.0.1"
   resolved "https://bsquare-753989949864.d.codeartifact.us-west-2.amazonaws.com/npm/bsquare/deep-eql/-/deep-eql-3.0.1.tgz#dfc9404400ad1c8fe023e7da1df1c147c4b444df"
   integrity sha512-+QeIQyN5ZuO+3Uk5DYh6/1eKO0m0YmJFGNmFHGACpf1ClL1nmlV/p4gNgbl2pJGxgXb4faqo6UE+M5ACEMyVcw==
-  dependencies:
-    type-detect "^4.0.0"
-
-deep-eql@^4.1.3:
-  version "4.1.3"
-  resolved "https://bsquare-753989949864.d.codeartifact.us-west-2.amazonaws.com/npm/bsquare/deep-eql/-/deep-eql-4.1.3.tgz#7c7775513092f7df98d8df9996dd085eb668cc6d"
-  integrity sha512-WaEtAOpRA1MQ0eohqZjpGD8zdI0Ovsm8mmFhaDN8dvDZzyoUMcYDnf5Y6iu7HTXxf8JDS23qWa4a+hKCDyOPzw==
   dependencies:
     type-detect "^4.0.0"
 
@@ -2415,12 +2394,10 @@ long@^5.2.1:
   resolved "https://bsquare-753989949864.d.codeartifact.us-west-2.amazonaws.com/npm/bsquare/long/-/long-5.2.3.tgz#a3ba97f3877cf1d778eccbcb048525ebb77499e1"
   integrity sha512-lcHwpNoggQTObv5apGNCTdJrO69eHOZMi4BNC+rTLER8iHAqGrUVeLh/irVIM7zTw2bOXA8T6uNPeujwOLg/2Q==
 
-loupe@^2.3.6:
-  version "2.3.6"
-  resolved "https://bsquare-753989949864.d.codeartifact.us-west-2.amazonaws.com/npm/bsquare/loupe/-/loupe-2.3.6.tgz#76e4af498103c532d1ecc9be102036a21f787b53"
-  integrity sha512-RaPMZKiMy8/JruncMU5Bt6na1eftNoo++R4Y+N2FrxkDVTrGvcyzFTsaGif4QTeKESheMGegbhw6iUAq+5A8zA==
-  dependencies:
-    get-func-name "^2.0.0"
+lru-cache@^10.0.1:
+  version "10.0.1"
+  resolved "https://bsquare-753989949864.d.codeartifact.us-west-2.amazonaws.com/npm/bsquare/lru-cache/-/lru-cache-10.0.1.tgz#0a3be479df549cca0e5d693ac402ff19537a6b7a"
+  integrity sha512-IJ4uwUTi2qCccrioU6g9g/5rvvVl13bsdczUUcqbciD9iLr095yj8DQKdObriEvuNSx325N1rV1O0sJFszx75g==
 
 lru-cache@^5.1.1:
   version "5.1.1"
@@ -2856,7 +2833,7 @@ path-type@^4.0.0:
   resolved "https://bsquare-753989949864.d.codeartifact.us-west-2.amazonaws.com/npm/bsquare/path-type/-/path-type-4.0.0.tgz#84ed01c0a7ba380afe09d90a8c180dcd9d03043b"
   integrity sha512-gDKb8aZMDeD/tZWs9P6+q0J9Mwkdl6xMV8TjnGP3qJVJ06bdMgkbBlLU8IdfOsIsFz2BW1rNVT3XuNEl8zPAvw==
 
-pathval@^1.1.0, pathval@^1.1.1:
+pathval@^1.1.0:
   version "1.1.1"
   resolved "https://bsquare-753989949864.d.codeartifact.us-west-2.amazonaws.com/npm/bsquare/pathval/-/pathval-1.1.1.tgz#8534e77a77ce7ac5a2512ea21e0fdb8fcf6c3d8d"
   integrity sha512-Dp6zGqpTdETdR63lehJYPeIOqpiNBNtc7BpWSLrOje7UaIsE5aY92r/AunQA7rsXvet3lrJ3JnZX29UPTKXyKQ==
@@ -3377,7 +3354,7 @@ type-check@^0.4.0, type-check@~0.4.0:
   dependencies:
     prelude-ls "^1.2.1"
 
-type-detect@^4.0.0, type-detect@^4.0.5, type-detect@^4.0.8:
+type-detect@^4.0.0, type-detect@^4.0.5:
   version "4.0.8"
   resolved "https://bsquare-753989949864.d.codeartifact.us-west-2.amazonaws.com/npm/bsquare/type-detect/-/type-detect-4.0.8.tgz#7646fb5f18871cfbb7749e69bd39a6388eb7450c"
   integrity sha512-0fr/mIH1dlO+x7TlcMy+bIDqKPsw/70tVyeHW787goQjhmqaZe10uwLujubK9q9Lg6Fiho1KUKDYz0Z7k7g5/g==

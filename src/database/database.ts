@@ -5,11 +5,10 @@ import {
   UnauthorizedError,
 } from '@bsquare/base-service';
 import {
-  OobEdgeOperationUpdate,
+  OobAssetRequest,
   OobOperationCreateRequest,
   OobOperationRequest,
   OobOperationStatusCode,
-  OobOperationUpdateRequest,
 } from '@bsquare/companion-common';
 import {
   bufferToString,
@@ -34,7 +33,16 @@ export interface OobAssetDb {
   secretHash: string;
 }
 
-type OperationUpdateDb = OobEdgeOperationUpdate & OobOperationUpdateRequest;
+export interface OperationUpdateDb {
+  status: OobOperationStatusCode;
+  additionalDetails?: string;
+  progress?: { position: number; size?: number };
+  tries?: number;
+}
+
+export interface OobAssetUpdateDb {
+  bootId: string;
+}
 
 // This will be used when there's operations on the table.
 export interface OobOperationDb<T = unknown> {
@@ -43,6 +51,7 @@ export interface OobOperationDb<T = unknown> {
   id: LongObjectId;
   name: string;
   status: OobOperationStatusCode;
+  tries: number;
   additionalDetails?: string | null;
   parameters?: T;
   progress?: { position: number; size?: number } | null;
@@ -53,6 +62,13 @@ const OPERATION_FILTER_MAP: SqlFilterMap = {
   asset_id: { type: 'string', name: 'assetId' },
   name: { type: 'string' },
   status: { type: 'string' },
+  tries: { type: 'number' },
+};
+
+const ASSET_FILTER_MAP: SqlFilterMap = {
+  asset_id: { name: 'assetId', type: 'string' },
+  boot_id: { name: 'bootId', type: 'string' },
+  last_active: { name: 'lastActive', type: 'date' },
 };
 
 export class OutOfBandDb extends Database {
@@ -126,7 +142,7 @@ export class OutOfBandDb extends Database {
   ): Promise<void> {
     const { query, values } = makeUpdate(
       'oob_operations',
-      'WHERE `tenant_id` = ? AND `asset_id` = ? AND `operation_id` = ?',
+      '`tenant_id` = ? AND `asset_id` = ? AND `id` = ?',
       [
         { name: 'status', value: request.status },
         { name: 'additional_details', value: request.additionalDetails },
@@ -134,6 +150,7 @@ export class OutOfBandDb extends Database {
           name: 'progress',
           value: request.progress ? JSON.stringify(request.progress) : request.progress,
         },
+        { name: 'tries', value: request.tries },
       ],
     );
 
@@ -143,6 +160,39 @@ export class OutOfBandDb extends Database {
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
       [...(values || []), tenantId, assetId, new LongObjectId(operationId).toBSON()],
       { transaction: false },
+    );
+  }
+
+  public async increaseOperationTries(operationIds: LongObjectId[]): Promise<void> {
+    if (operationIds.length > 0) {
+      const query = [
+        'UPDATE `oob_operations` SET `tries` = `tries` + 1 WHERE `id` IN (',
+        operationIds.map(() => '?').join(', '),
+        ')',
+      ].join('');
+      await super.query(
+        query,
+        operationIds.map((id) => id.toBSON()),
+        { transaction: false, checkTenant: false },
+      );
+    }
+  }
+
+  public getAssets(tenantId: string, options: OobAssetRequest): Promise<OobAssetDb[]> {
+    const filter = createSqlWrapper(
+      {
+        query: 'SELECT * FROM `oob_assets` WHERE `tenant_id` = ?',
+      },
+      ASSET_FILTER_MAP,
+      options,
+    );
+
+    return this.query<OobAssetDb[]>(
+      filter.query,
+      // If null, which it shouldn't be, it should be an empty array.
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+      [tenantId, ...(filter.values || [])],
+      { transaction: false, removeNulls: true },
     );
   }
 
@@ -167,6 +217,24 @@ export class OutOfBandDb extends Database {
     await super.query(query, values, { transaction: false });
 
     return token;
+  }
+
+  public async updateAsset(
+    tenantId: string,
+    assetId: string,
+    request: OobAssetUpdateDb,
+  ): Promise<void> {
+    const { query, values } = makeUpdate('oob_assets', '`tenant_id` = ? AND `asset_id` = ?', [
+      { name: 'boot_id', value: request.bootId },
+    ]);
+
+    await this.query(
+      query,
+      // If null, which it shouldn't be, it should be an empty array.
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+      [...(values || []), tenantId, assetId],
+      { transaction: false },
+    );
   }
 
   public async updateAssetActivity(tenantId: string, assetId: string): Promise<void> {
