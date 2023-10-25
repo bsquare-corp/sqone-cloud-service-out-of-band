@@ -3,11 +3,19 @@ import 'source-map-support/register';
 import { getLogger, NodeServer } from '@bsquare/base-service';
 import { PipelineEvent } from '@bsquare/companion-common';
 import {
+  CloudFileApi,
   CloudInterface,
   CloudQueueApi,
   verifyPermissions,
 } from '@bsquare/companion-service-common';
-import { RDS_DATABASE, RDS_HOSTNAME, RDS_PASSWORD, RDS_PORT, RDS_USERNAME } from './config';
+import {
+  OOB_BUCKET,
+  RDS_DATABASE,
+  RDS_HOSTNAME,
+  RDS_PASSWORD,
+  RDS_PORT,
+  RDS_USERNAME,
+} from './config';
 import { OutOfBandDb } from './database';
 import { RaiseEventCallback } from './routes/handle';
 import { outOfBandRouter } from './routes/router';
@@ -24,16 +32,18 @@ const SQL_OPTIONS = {
 
 export class OutOfBandServer extends NodeServer {
   private eventQueue: CloudQueueApi<PipelineEvent>;
+  private fileApi: CloudFileApi;
 
-  protected constructor(eventQueue: CloudQueueApi<PipelineEvent>) {
+  protected constructor(eventQueue: CloudQueueApi<PipelineEvent>, fileApi: CloudFileApi) {
     super();
     this.eventQueue = eventQueue;
+    this.fileApi = fileApi;
 
     this.useRouteFinder = true;
   }
 
-  public static run(eventQueue: CloudQueueApi<PipelineEvent>): void {
-    const server = new OutOfBandServer(eventQueue);
+  public static run(eventQueue: CloudQueueApi<PipelineEvent>, fileApi: CloudFileApi): void {
+    const server = new OutOfBandServer(eventQueue, fileApi);
 
     NodeServer.runServer(server);
   }
@@ -41,8 +51,11 @@ export class OutOfBandServer extends NodeServer {
   // Public to be used by tests.
   public readonly db = new OutOfBandDb(SQL_OPTIONS);
 
-  public static createDummy(eventQueue: CloudQueueApi<PipelineEvent>): OutOfBandServer {
-    return new OutOfBandServer(eventQueue);
+  public static createDummy(
+    eventQueue: CloudQueueApi<PipelineEvent>,
+    fileApi: CloudFileApi,
+  ): OutOfBandServer {
+    return new OutOfBandServer(eventQueue, fileApi);
   }
 
   public async start(): Promise<void> {
@@ -56,8 +69,8 @@ export class OutOfBandServer extends NodeServer {
   public override async stop(quit = true): Promise<void> {
     try {
       logger.info('Stopping service');
-
       await this.eventQueue.close();
+      await this.fileApi.close();
 
       logger.debug('Stopping rest');
       await super.stop();
@@ -85,6 +98,7 @@ export class OutOfBandServer extends NodeServer {
       res.locals = {
         db: this.db,
         dispatchEvent,
+        fileApi: this.fileApi,
       };
       next();
     });
@@ -97,5 +111,9 @@ export class OutOfBandServer extends NodeServer {
 export async function initService(cloudInterface: CloudInterface): Promise<void> {
   // TODO Consider listening for asset delete events.
   const eventQueue = await cloudInterface.initEventQueue();
-  OutOfBandServer.run(eventQueue);
+  const fileApi = await cloudInterface.initFileApi({ bucketName: OOB_BUCKET });
+  if (!fileApi.getFileUploadLink) {
+    throw new Error('getFileUploadLink not set');
+  }
+  OutOfBandServer.run(eventQueue, fileApi);
 }

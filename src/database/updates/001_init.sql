@@ -15,9 +15,10 @@ CREATE TABLE IF NOT EXISTS `oob_operations` (
   `id` BINARY(16) NOT NULL,
   `name` VARCHAR(64) NOT NULL,
   `status` VARCHAR(64) NOT NULL,
-  `additional_details` TEXT NULL DEFAULT NULL,
-  `progress` JSON NULL DEFAULT NULL,
-  `parameters` JSON NULL DEFAULT NULL,
+  `tries` SMALLINT NOT NULL DEFAULT 0 COMMENT 'Once marked as pending the try count should increase by one and then once for each time its fetched after that',
+  `additional_details` TEXT NULL DEFAULT NULL COMMENT 'Text for unexpected failure conditions',
+  `progress` JSON NULL DEFAULT NULL COMMENT 'Progress object if the device is doing a long operation',
+  `parameters` JSON NULL DEFAULT NULL COMMENT 'The parameters used when sending the request to the device',
 
   PRIMARY KEY (`tenant_id`, `asset_id`, `id`),
   UNIQUE KEY `oob_operation_id` (`id`),
