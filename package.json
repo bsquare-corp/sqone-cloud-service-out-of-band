@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "@bsquare/base-service": "^5.3.0",
-    "@bsquare/companion-common": "^5.37.1",
+    "@bsquare/companion-common": "^5.37.2",
     "@bsquare/companion-service-common": "^5.3.0",
     "argon2": "^0.31.1",
     "express": "^4.18.2",

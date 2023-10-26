@@ -1,6 +1,6 @@
 import { HandleArg, handleRequest } from '@bsquare/base-service';
 import { PipelineEvent } from '@bsquare/companion-common';
-import type { CloudFileApi } from '@bsquare/companion-service-common';
+import { CloudFileApi, mapExpressParams } from '@bsquare/companion-service-common';
 import { Request, RequestHandler, Response } from 'express';
 import type { OutOfBandDb } from '../database';
 
@@ -13,7 +13,8 @@ export interface HandleData<T = Record<string, unknown>> extends Record<string, 
   locals: T;
 }
 
-function extractor<T>({ res }: { res: Response; req: Request }): HandleData<T> {
+function extractor<T>({ res, req }: { res: Response; req: Request }): HandleData<T> {
+
   const locals = res.locals as {
     db: OutOfBandDb;
     fileApi: CloudFileApi;
@@ -25,6 +26,7 @@ function extractor<T>({ res }: { res: Response; req: Request }): HandleData<T> {
     fileApi: locals.fileApi,
     dispatchEvent: locals.dispatchEvent,
     locals: res.locals as T,
+    params: mapExpressParams(req),
   };
 }
 
