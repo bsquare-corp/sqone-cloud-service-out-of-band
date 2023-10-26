@@ -2,17 +2,20 @@ import {
   OobAsset,
   OobAssetRequest,
   OobOperation,
+  OobOperationCreateRequest,
   OobOperationName,
   OobOperationRequest,
   OobOperationStatusCode,
 } from '@bsquare/companion-common';
 import { appendParams, exchangeSystemToken } from '@bsquare/companion-service-common';
+import Assert from 'assert';
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 import Fetch from 'node-fetch';
+import { MAX_PENDING_OPERATIONS_PER_ASSET } from '../../config';
 import { OOB_API_URI, oobApi } from '../integration-wrapper';
 
-const regToken = 'reg@test-token';
+const systemToken = 'system@test-token';
 
 async function getAssets(tenantId: string, request?: OobAssetRequest): Promise<OobAsset[]> {
   let url = `${OOB_API_URI}/v1/api/oob/assets`;
@@ -21,7 +24,7 @@ async function getAssets(tenantId: string, request?: OobAssetRequest): Promise<O
   }
   const res = await Fetch(url, {
     headers: {
-      'Authorization': `Bearer ${await exchangeSystemToken(regToken)}`,
+      'Authorization': `Bearer ${await exchangeSystemToken(systemToken)}`,
       'X-Tenant': tenantId,
     },
   });
@@ -41,7 +44,7 @@ async function getOperations(
   }
   const res = await Fetch(url, {
     headers: {
-      'Authorization': `Bearer ${await exchangeSystemToken(regToken)}`,
+      'Authorization': `Bearer ${await exchangeSystemToken(systemToken)}`,
       'X-Tenant': tenantId,
     },
   });
@@ -49,6 +52,29 @@ async function getOperations(
     throw new Error(`Request failed: ${await res.text()}`);
   }
   return res.json() as Promise<OobOperation[]>;
+}
+
+async function createOperation(
+  tenantId: string,
+  assetId: string,
+  request: OobOperationCreateRequest,
+): Promise<string> {
+  const res = await Fetch(`${OOB_API_URI}/v1/api/oob/assets/${assetId}/operations`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${await exchangeSystemToken(systemToken)}`,
+      'X-Tenant': tenantId,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+  if (!res.ok) {
+    throw new Error(`Request failed: ${await res.text()}`);
+  }
+  expect(res.status).to.equal(201);
+  const operationId = (await res.json()) as string;
+  expect(operationId).to.be.a('string');
+  return operationId;
 }
 
 describe('Management Router tests', () => {
@@ -138,5 +164,59 @@ describe('Management Router tests', () => {
         tries: { equals: 0 },
       }).then((res) => res.length),
     ).to.equal(1);
+  });
+
+  it('Create operation', async () => {
+    await oobApi.db.createAsset('tenant-a', 'asset-a');
+
+    const operationId = await createOperation('tenant-a', 'asset-a', {
+      name: OobOperationName.RestartServices,
+    });
+
+    expect(await getOperations('tenant-a')).to.deep.equal([
+      {
+        id: operationId,
+        name: OobOperationName.RestartServices,
+        tries: 0,
+        status: OobOperationStatusCode.Created,
+        assetId: 'asset-a',
+      },
+    ]);
+  });
+
+  it('Cant create too many operations', async () => {
+    await oobApi.db.createAsset('tenant-a', 'asset-a');
+    await oobApi.db.createAsset('tenant-a', 'asset-b');
+
+    let firstOperationId = undefined as string | undefined;
+    // Max out the pending operations per asset
+    for (let i = 0; i < MAX_PENDING_OPERATIONS_PER_ASSET; i++) {
+      const operationId = await createOperation('tenant-a', 'asset-a', {
+        name: OobOperationName.RestartServices,
+      });
+      if (firstOperationId === undefined) {
+        firstOperationId = operationId;
+      }
+    }
+    // Make sure more can't be created for that asset
+    await Assert.rejects(
+      createOperation('tenant-a', 'asset-a', {
+        name: OobOperationName.RestartServices,
+      }),
+    );
+
+    // Make sure the limit doesn't apply accross assets
+    await createOperation('tenant-a', 'asset-b', {
+      name: OobOperationName.RestartServices,
+    });
+
+    // Cancel an operation and make sure creating another works.
+    expect(firstOperationId).to.be.a('string');
+    await oobApi.db.updateOperation('tenant-a', 'asset-a', firstOperationId as string, {
+      status: OobOperationStatusCode.Cancelled,
+    });
+    await createOperation('tenant-a', 'asset-a', {
+      name: OobOperationName.RestartServices,
+    });
   });
 });

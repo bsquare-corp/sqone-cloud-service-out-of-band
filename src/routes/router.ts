@@ -1,4 +1,4 @@
-import { BadRequestError, LongObjectId, Validator } from '@bsquare/base-service';
+import { BadRequestError, LongObjectId, NotFoundError, Validator } from '@bsquare/base-service';
 import {
   EventIdTypes,
   EventTypes,
@@ -6,11 +6,14 @@ import {
   OobAsset,
   OobAssetRequest,
   OobOperation,
+  OobOperationCreateRequest,
   OobOperationName,
   OobOperationRequest,
+  OobOperationStatusCode,
 } from '@bsquare/companion-common';
 import { authenticate, AuthenticateLocals } from '@bsquare/companion-service-common';
 import { Router } from 'express';
+import { MAX_PENDING_OPERATIONS_PER_ASSET } from '../config';
 import { handle } from './handle';
 import { outOfBandEdgeRouter } from './router-edge';
 
@@ -22,7 +25,10 @@ const OPERATION_REQUEST_VALIDATOR = Validator.loadSync<OobOperationRequest>(
   'OobOperationRequest',
   SCHEMA_PATH,
 );
-// TODO When adding endpoint to create operations limit them to X per device.
+const OPERATION_CREATE_VALIDATOR = Validator.loadSync<OobOperationCreateRequest>(
+  'OobOperationCreateRequest',
+  SCHEMA_PATH,
+);
 
 outOfBandRouter.use('/edge', outOfBandEdgeRouter);
 
@@ -82,5 +88,43 @@ outOfBandRouter.get(
       parameters: operation.parameters,
     }));
     res.json(operations);
+  }),
+);
+
+outOfBandRouter.post(
+  '/assets/:assetId/operations',
+  authenticate('OutOfBand.Manage'),
+  handle<AuthenticateLocals>(async ({ req, res, db, locals, params, dispatchEvent }) => {
+    const request = OPERATION_CREATE_VALIDATOR.validate(params);
+    const assetId = req.params.assetId;
+    if (!assetId) {
+      throw new BadRequestError('assetId missing in route');
+    }
+    const [asset] = await db.getAssets(locals.tenantId, { assetId });
+    if (!asset) {
+      throw new NotFoundError('Out of band asset not found');
+    }
+    const pendingOperations = await db.getOperations(locals.tenantId, {
+      assetId,
+      status: [
+        OobOperationStatusCode.Created,
+        OobOperationStatusCode.Pending,
+        OobOperationStatusCode.InProgress,
+      ],
+    });
+    if (pendingOperations.length >= MAX_PENDING_OPERATIONS_PER_ASSET) {
+      throw new BadRequestError('Device has too many pending operations');
+    }
+    const id = await db.createOperation(locals.tenantId, asset.assetId, request);
+    await dispatchEvent({
+      id: new LongObjectId().toHexString(),
+      tenantId: locals.tenantId,
+      type: EventTypes.OobOperationCreate,
+      ...locals.eventSource,
+      targetType: EventIdTypes.Asset,
+      targetId: assetId,
+      data: { id, request },
+    });
+    res.status(201).json(id);
   }),
 );
