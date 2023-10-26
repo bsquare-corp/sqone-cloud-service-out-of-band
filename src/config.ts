@@ -12,3 +12,8 @@ export const MAX_OPERATION_TRIES = getNumberEnv('MAX_OPERATION_TRIES', 3);
 
 export const TOKEN_CACHE_MAX = getNumberEnv('TOKEN_CACHE_MAX', 1000);
 export const TOKEN_CACHE_TTL_MS = getNumberEnv('TOKEN_CACHE_TTL_MS', 15 * 60 * 1000);
+
+export const MAX_PENDING_OPERATIONS_PER_ASSET = getNumberEnv(
+  'MAX_PENDING_OPERATIONS_PER_ASSET',
+  10,
+);
