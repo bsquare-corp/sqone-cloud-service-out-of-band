@@ -14,7 +14,6 @@ export interface HandleData<T = Record<string, unknown>> extends Record<string, 
 }
 
 function extractor<T>({ res, req }: { res: Response; req: Request }): HandleData<T> {
-
   const locals = res.locals as {
     db: OutOfBandDb;
     fileApi: CloudFileApi;

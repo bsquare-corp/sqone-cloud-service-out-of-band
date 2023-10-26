@@ -35,8 +35,8 @@ export interface OobAssetDb {
 
 export interface OperationUpdateDb {
   status: OobOperationStatusCode;
-  additionalDetails?: string;
-  progress?: { position: number; size?: number };
+  additionalDetails?: string | null;
+  progress?: { position: number; size?: number } | null;
   tries?: number;
 }
 
@@ -52,9 +52,9 @@ export interface OobOperationDb<T = unknown> {
   name: string;
   status: OobOperationStatusCode;
   tries: number;
-  additionalDetails?: string | null;
+  additionalDetails?: string;
   parameters?: T;
-  progress?: { position: number; size?: number } | null;
+  progress?: { position: number; size?: number };
 }
 
 const OPERATION_FILTER_MAP: SqlFilterMap = {
