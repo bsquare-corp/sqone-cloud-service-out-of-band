@@ -6,6 +6,7 @@ import {
   OobOperationName,
   OobOperationRequest,
   OobOperationStatusCode,
+  OobOperationUpdateRequest,
 } from '@bsquare/companion-common';
 import { appendParams, exchangeSystemToken } from '@bsquare/companion-service-common';
 import Assert from 'assert';
@@ -54,6 +55,28 @@ async function getOperations(
   return res.json() as Promise<OobOperation[]>;
 }
 
+async function getOperationLink(
+  tenantId: string,
+  assetId: string,
+  operationId: string,
+): Promise<string> {
+  const res = await Fetch(
+    `${OOB_API_URI}/v1/api/oob/assets/${assetId}/operations/${operationId}/link`,
+    {
+      headers: {
+        'Authorization': `Bearer ${await exchangeSystemToken(systemToken)}`,
+        'X-Tenant': tenantId,
+      },
+    },
+  );
+  if (!res.ok) {
+    throw new Error(`Request failed: ${await res.text()}`);
+  }
+  const link = await res.json();
+  expect(link).to.be.a('string');
+  return link as string;
+}
+
 async function createOperation(
   tenantId: string,
   assetId: string,
@@ -75,6 +98,27 @@ async function createOperation(
   const operationId = (await res.json()) as string;
   expect(operationId).to.be.a('string');
   return operationId;
+}
+
+async function updateOperation(
+  tenantId: string,
+  assetId: string,
+  operationId: string,
+  request: OobOperationUpdateRequest,
+): Promise<void> {
+  const res = await Fetch(`${OOB_API_URI}/v1/api/oob/assets/${assetId}/operations/${operationId}`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${await exchangeSystemToken(systemToken)}`,
+      'X-Tenant': tenantId,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+  if (!res.ok) {
+    throw new Error(`Request failed: ${await res.text()}`);
+  }
+  expect(res.status).to.equal(204);
 }
 
 describe('Management Router tests', () => {
@@ -218,5 +262,72 @@ describe('Management Router tests', () => {
     await createOperation('tenant-a', 'asset-a', {
       name: OobOperationName.RestartServices,
     });
+  });
+
+  it('Can cancel operation', async () => {
+    await oobApi.db.createAsset('tenant-a', 'asset-a');
+    const operationId = await createOperation('tenant-a', 'asset-a', {
+      name: OobOperationName.RestartServices,
+    });
+    await updateOperation('tenant-a', 'asset-a', operationId, {
+      status: OobOperationStatusCode.Cancelled,
+    });
+    expect(
+      await oobApi.db.getOperations('tenant-a', { id: operationId }).then((res) => res[0]),
+    ).to.deep.include({
+      status: OobOperationStatusCode.Cancelled,
+    });
+  });
+
+  it('Cant cancel acknowledged operation', async () => {
+    await oobApi.db.createAsset('tenant-a', 'asset-a');
+    const operationId = await createOperation('tenant-a', 'asset-a', {
+      name: OobOperationName.RestartServices,
+    });
+    await oobApi.db.updateOperation('tenant-a', 'asset-a', operationId, {
+      status: OobOperationStatusCode.Pending,
+    });
+    await Assert.rejects(
+      updateOperation('tenant-a', 'asset-a', operationId, {
+        status: OobOperationStatusCode.Cancelled,
+      }),
+    );
+  });
+
+  it('Can generate operation download link', async () => {
+    await oobApi.db.createAsset('tenant-a', 'asset-a');
+    const operationId = await createOperation('tenant-a', 'asset-a', {
+      name: OobOperationName.SendFiles,
+      parameters: { paths: ['/var/lib'] },
+    });
+    await oobApi.db.updateOperation('tenant-a', 'asset-a', operationId, {
+      status: OobOperationStatusCode.Success,
+    });
+    expect(await getOperationLink('tenant-a', 'asset-a', operationId)).to.equal(
+      `https://s3/tenant-a/${operationId}`,
+    );
+  });
+
+  it('Cant generate operation download link for unsupported operation', async () => {
+    await oobApi.db.createAsset('tenant-a', 'asset-a');
+    const operationId = await createOperation('tenant-a', 'asset-a', {
+      name: OobOperationName.Reboot,
+    });
+    await oobApi.db.updateOperation('tenant-a', 'asset-a', operationId, {
+      status: OobOperationStatusCode.Success,
+    });
+    await Assert.rejects(getOperationLink('tenant-a', 'asset-a', operationId));
+  });
+
+  it('Cant generate operation download link when status is not success', async () => {
+    await oobApi.db.createAsset('tenant-a', 'asset-a');
+    const operationId = await createOperation('tenant-a', 'asset-a', {
+      name: OobOperationName.SendFiles,
+      parameters: { paths: ['/var/lib'] },
+    });
+    await oobApi.db.updateOperation('tenant-a', 'asset-a', operationId, {
+      status: OobOperationStatusCode.Pending,
+    });
+    await Assert.rejects(getOperationLink('tenant-a', 'asset-a', operationId));
   });
 });

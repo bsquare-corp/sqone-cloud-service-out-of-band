@@ -90,7 +90,8 @@ export class OutOfBandServer extends NodeServer {
   }
 
   protected async configure(): Promise<void> {
-    // TODO Cron to ensure all assets still exist.
+    // TODO Cron to ensure all assets still exist and clean up ones that don't.
+    // TODO Cron to delete and fail operations older than X.
     await this.db.connect();
 
     const dispatchEvent: RaiseEventCallback = (event) => this.eventQueue.write(event);
@@ -109,7 +110,7 @@ export class OutOfBandServer extends NodeServer {
 }
 
 export async function initService(cloudInterface: CloudInterface): Promise<void> {
-  // TODO Consider listening for asset delete events.
+  // TODO Listen for asset delete events and cleanup, maybe asset ban?
   const eventQueue = await cloudInterface.initEventQueue();
   const fileApi = await cloudInterface.initFileApi({ bucketName: OOB_BUCKET });
   if (!fileApi.getFileUploadLink) {

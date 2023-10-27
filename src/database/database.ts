@@ -21,6 +21,7 @@ import {
   SqlFilterMap,
 } from '@bsquare/companion-service-common';
 import * as Argon2 from 'argon2';
+import * as MySQL from 'mysql2/promise';
 import Path from 'path';
 
 const TOKEN_SECRET_LENGTH_BYTES = 32;
@@ -70,6 +71,12 @@ const ASSET_FILTER_MAP: SqlFilterMap = {
   boot_id: { name: 'bootId', type: 'string' },
   last_active: { name: 'lastActive', type: 'date' },
 };
+
+export const IN_PROGRESS_OPERATION_STATUSES = [
+  OobOperationStatusCode.Created,
+  OobOperationStatusCode.Pending,
+  OobOperationStatusCode.InProgress,
+];
 
 export class OutOfBandDb extends Database {
   public override async connect(): Promise<void> {
@@ -134,33 +141,39 @@ export class OutOfBandDb extends Database {
     return id.toHexString();
   }
 
+  // Returns true if any rows match the criteria.
   public async updateOperation(
     tenantId: string,
     assetId: string,
     operationId: string,
     request: OperationUpdateDb,
-  ): Promise<void> {
-    const { query, values } = makeUpdate(
-      'oob_operations',
-      '`tenant_id` = ? AND `asset_id` = ? AND `id` = ?',
-      [
-        { name: 'status', value: request.status },
-        { name: 'additional_details', value: request.additionalDetails },
-        {
-          name: 'progress',
-          value: request.progress ? JSON.stringify(request.progress) : request.progress,
-        },
-        { name: 'tries', value: request.tries },
-      ],
-    );
+    whereStatuses?: OobOperationStatusCode[],
+  ): Promise<boolean> {
+    let whereQuery = '`tenant_id` = ? AND `asset_id` = ? AND `id` = ?';
+    const whereValues: unknown[] = [tenantId, assetId, new LongObjectId(operationId).toBSON()];
+    if (whereStatuses) {
+      whereQuery = `${whereQuery} AND \`status\` IN (${whereStatuses.map(() => '?').join(', ')})`;
+      whereValues.push(...whereStatuses);
+    }
 
-    await this.query(
+    const { query, values } = makeUpdate('oob_operations', whereQuery, [
+      { name: 'status', value: request.status },
+      { name: 'additional_details', value: request.additionalDetails },
+      {
+        name: 'progress',
+        value: request.progress ? JSON.stringify(request.progress) : request.progress,
+      },
+      { name: 'tries', value: request.tries },
+    ]);
+
+    const res: MySQL.ResultSetHeader = await this.query(
       query,
       // If null, which it shouldn't be, it should be an empty array.
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-      [...(values || []), tenantId, assetId, new LongObjectId(operationId).toBSON()],
+      [...(values || []), ...whereValues],
       { transaction: false },
     );
+    return res.affectedRows > 0;
   }
 
   public async increaseOperationTries(operationIds: LongObjectId[]): Promise<void> {

@@ -23,7 +23,13 @@ import { EventSource } from '@bsquare/companion-service-common';
 import { Router } from 'express';
 import { LRUCache } from 'lru-cache';
 import { MAX_OPERATION_TRIES, TOKEN_CACHE_MAX, TOKEN_CACHE_TTL_MS } from '../config';
-import type { OobAssetDb, OobOperationDb, OperationUpdateDb, OutOfBandDb } from '../database';
+import {
+  IN_PROGRESS_OPERATION_STATUSES,
+  OobAssetDb,
+  OobOperationDb,
+  OperationUpdateDb,
+  OutOfBandDb,
+} from '../database';
 import { parseOobHeader } from '../oob-header-parser';
 import { handle, RaiseEventCallback } from './handle';
 
@@ -101,22 +107,39 @@ async function updateOperation(options: {
   update: OperationUpdateDb;
   eventSource: EventSource;
 }): Promise<void> {
-  // TODO Ignore if operation already complete in DB, then don't raise event.
-  await options.db.updateOperation(
+  const updated = await options.db.updateOperation(
     options.operation.tenantId,
     options.operation.assetId,
     options.operation.id.toHexString(),
     options.update,
+    IN_PROGRESS_OPERATION_STATUSES,
   );
-  await options.dispatchEvent({
-    id: new LongObjectId().toHexString(),
-    tenantId: options.operation.tenantId,
-    type: EventTypes.OobOperationUpdate,
-    ...options.eventSource,
-    targetType: EventIdTypes.Asset,
-    targetId: options.operation.assetId,
-    data: options.update,
-  });
+  // Ignore if operation already complete in DB, then don't raise event.
+  if (updated) {
+    await options.dispatchEvent({
+      id: new LongObjectId().toHexString(),
+      tenantId: options.operation.tenantId,
+      type: EventTypes.OobOperationUpdate,
+      ...options.eventSource,
+      targetType: EventIdTypes.Asset,
+      targetId: options.operation.assetId,
+      data: options.update,
+    });
+  } else {
+    if (IN_PROGRESS_OPERATION_STATUSES.includes(options.update.status)) {
+      logger.info(
+        'In progress status update received for completed operation',
+        options.operation,
+        options.update,
+      );
+    } else {
+      logger.warn(
+        'Second completion update for completed operation',
+        options.operation,
+        options.update,
+      );
+    }
+  }
 }
 
 outOfBandEdgeRouter.patch(
@@ -262,7 +285,7 @@ outOfBandEdgeRouter.get(
               parameters: {
                 ...(operation.parameters as Pick<OobEdgeOperationSendFilesParameters, 'paths'>),
                 method: 'PUT',
-                destination: await fileApi.getFileUploadLink(base.id),
+                destination: await fileApi.getFileUploadLink(`${operation.tenantId}/${base.id}`),
               },
             } as OobEdgeOperationSendFiles;
           }
