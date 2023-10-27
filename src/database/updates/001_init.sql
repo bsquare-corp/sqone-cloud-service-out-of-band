@@ -1,3 +1,18 @@
+CREATE TABLE IF NOT EXISTS `oob_tenants` (
+  `id` VARCHAR(32) NOT NULL PRIMARY KEY,
+  `version` INT NULL DEFAULT NULL
+);
+
+DROP TRIGGER IF EXISTS oob_tenant_creation;
+CREATE TRIGGER oob_tenant_creation AFTER INSERT ON `tenants`
+FOR EACH ROW
+  BEGIN
+    INSERT INTO `oob_tenants` (`id`) VALUES (NEW.`id`);
+  END;
+
+-- Copy existing tenants in.
+INSERT IGNORE INTO `oob_tenants` (`id`) SELECT `id` from `tenants`;
+
 CREATE TABLE IF NOT EXISTS `oob_assets` (
   `tenant_id` VARCHAR(32) NOT NULL,
   `asset_id` VARCHAR(255) NOT NULL,
