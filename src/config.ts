@@ -1,4 +1,4 @@
-import { getEnv, getNumberEnv } from '@bsquare/base-service';
+import { getEnv, getEnvBoolean, getNumberEnv } from '@bsquare/base-service';
 
 export const RDS_HOSTNAME = getEnv('RDS_HOSTNAME');
 export const RDS_USERNAME = getEnv('RDS_USERNAME');
@@ -17,3 +17,18 @@ export const MAX_PENDING_OPERATIONS_PER_ASSET = getNumberEnv(
   'MAX_PENDING_OPERATIONS_PER_ASSET',
   10,
 );
+
+export const CRON_PREFIX = 'oob';
+export const CRON_ENABLED = getEnvBoolean('CRON_ENABLED', true);
+
+export const CRON_TENANT_AUGMENT_NAME = 'tenant_augment';
+// Interval in seconds between expiring streams.
+export const CRON_TENANT_AUGMENT_INTERVAL = 5 * 60;
+// Timeout in seconds when the job can be considered unresponsive.
+export const CRON_TENANT_AUGMENT_TIMEOUT = 2 * 60;
+
+export const SERVICE_EVENT_ID = 'oob';
+
+export const OOB_STREAM_ID = getEnv('OOB_STREAM_ID');
+export const API_HOST = getEnv('API_HOST');
+export const WAIT_FOR_EVENTS_SERVICE = getEnvBoolean('WAIT_FOR_EVENTS_SERVICE', true);

@@ -15,6 +15,7 @@ import {
   createSqlWrapper,
   Database,
   generateRandomBytes,
+  GenericIterator,
   makeInsert,
   makeUpdate,
   makeUpsert,
@@ -43,6 +44,11 @@ export interface OperationUpdateDb {
 
 export interface OobAssetUpdateDb {
   bootId: string;
+}
+
+export interface OobTenant {
+  id: string;
+  version?: number | null;
 }
 
 // This will be used when there's operations on the table.
@@ -89,13 +95,53 @@ export class OutOfBandDb extends Database {
     await super.applyUpdate(patchName, Path.resolve(Path.dirname(__filename), 'updates', file));
   }
 
+  public getTenants(): Promise<AsyncIterable<OobTenant>> {
+    return this.streamQuery('SELECT * FROM `oob_tenants`');
+  }
+
+  public async updateTenantVersion(tenantId: string, version: number): Promise<void> {
+    await this.query('UPDATE `oob_tenants` SET `version` = ? WHERE `id` = ?', [version, tenantId], {
+      checkTenant: false,
+    });
+  }
+
+  public async deleteAsset(tenantId: string, assetId: string): Promise<void> {
+    // Also deletes any operations attached to the asset.
+    await this.query(
+      'DELETE FROM `oob_assets` WHERE `tenant_id` = ? AND `asset_id` = ?',
+      [tenantId, assetId],
+      { transaction: false },
+    );
+  }
+
+  public iterateOperations(
+    tenantId: string | undefined,
+    options: OobOperationRequest,
+  ): AsyncIterable<OobOperationDb> {
+    return new GenericIterator<LongObjectId, OobOperationDb>(
+      async (size: number, afterId?: LongObjectId) => {
+        const operations = await this.getOperations(tenantId, {
+          ...options,
+          size,
+          sortBy: 'id',
+          sortDirection: 'ASC',
+          ...(afterId ? { id: { after: afterId.toHexString() } } : {}),
+        });
+        const newAfterId = operations[operations.length - 1]?.id;
+        return { items: operations, ...(newAfterId ? { afterId: newAfterId } : {}) };
+      },
+    );
+  }
+
   public async getOperations(
-    tenantId: string,
+    tenantId: string | undefined,
     options: OobOperationRequest,
   ): Promise<OobOperationDb[]> {
     const filter = createSqlWrapper(
       {
-        query: 'SELECT * FROM `oob_operations` WHERE `tenant_id` = ?',
+        query: tenantId
+          ? 'SELECT * FROM `oob_operations` WHERE `tenant_id` = ?'
+          : 'SELECT * FROM `oob_operations`',
       },
       OPERATION_FILTER_MAP,
       options,
@@ -109,8 +155,8 @@ export class OutOfBandDb extends Database {
       filter.query,
       // If null, which it shouldn't be, it should be an empty array.
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-      [tenantId, ...(filter.values || [])],
-      { transaction: false, removeNulls: true },
+      [...(tenantId ? [tenantId] : []), ...(filter.values || [])],
+      { transaction: false, removeNulls: true, checkTenant: false },
     );
     return operations.map((operation) => ({
       ...operation,

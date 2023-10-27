@@ -11,6 +11,9 @@ process.env.RDS_USERNAME = 'root';
 process.env.RDS_PASSWORD = 'password';
 process.env.RDS_PORT = '3309';
 process.env.RDS_DATABASE = 'companion';
+process.env.OOB_STREAM_ID = 'oob';
+process.env.WAIT_FOR_EVENTS_SERVICE = 'false';
+process.env.CRON_ENABLED = 'false';
 
 process.env.OOB_BUCKET = 'oob';
 
@@ -73,6 +76,7 @@ export const oobApi = OutOfBandServer.createDummy(
     },
     close: () => Promise.resolve(),
   },
+  () => Promise.resolve({ close: () => Promise.resolve() }),
 );
 process.env.PORT = originalPort;
 

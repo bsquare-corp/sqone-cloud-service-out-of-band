@@ -75,7 +75,6 @@ outOfBandRouter.get(
   }),
 );
 
-// TODO Endpoint for generating link to operation files.
 outOfBandRouter.get(
   '/operations',
   authenticate(),
