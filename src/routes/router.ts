@@ -10,10 +10,12 @@ import {
   OobOperationName,
   OobOperationRequest,
   OobOperationStatusCode,
+  OobOperationUpdateRequest,
 } from '@bsquare/companion-common';
 import { authenticate, AuthenticateLocals } from '@bsquare/companion-service-common';
 import { Router } from 'express';
 import { MAX_PENDING_OPERATIONS_PER_ASSET } from '../config';
+import { IN_PROGRESS_OPERATION_STATUSES } from '../database';
 import { handle } from './handle';
 import { outOfBandEdgeRouter } from './router-edge';
 
@@ -27,6 +29,10 @@ const OPERATION_REQUEST_VALIDATOR = Validator.loadSync<OobOperationRequest>(
 );
 const OPERATION_CREATE_VALIDATOR = Validator.loadSync<OobOperationCreateRequest>(
   'OobOperationCreateRequest',
+  SCHEMA_PATH,
+);
+const OPERATION_UPDATE_VALIDATOR = Validator.loadSync<OobOperationUpdateRequest>(
+  'OobOperationUpdateRequest',
   SCHEMA_PATH,
 );
 
@@ -69,6 +75,7 @@ outOfBandRouter.get(
   }),
 );
 
+// TODO Endpoint for generating link to operation files.
 outOfBandRouter.get(
   '/operations',
   authenticate(),
@@ -106,11 +113,7 @@ outOfBandRouter.post(
     }
     const pendingOperations = await db.getOperations(locals.tenantId, {
       assetId,
-      status: [
-        OobOperationStatusCode.Created,
-        OobOperationStatusCode.Pending,
-        OobOperationStatusCode.InProgress,
-      ],
+      status: IN_PROGRESS_OPERATION_STATUSES,
     });
     if (pendingOperations.length >= MAX_PENDING_OPERATIONS_PER_ASSET) {
       throw new BadRequestError('Device has too many pending operations');
@@ -126,5 +129,79 @@ outOfBandRouter.post(
       data: { id, request },
     });
     res.status(201).json(id);
+  }),
+);
+
+outOfBandRouter.patch(
+  '/assets/:assetId/operations/:operationId',
+  authenticate('OutOfBand.Manage'),
+  handle<AuthenticateLocals>(async ({ req, res, db, locals, params, dispatchEvent }) => {
+    const request = OPERATION_UPDATE_VALIDATOR.validate(params);
+    const assetId = req.params.assetId;
+    if (!assetId) {
+      throw new BadRequestError('assetId missing in route');
+    }
+    const operationId = req.params.operationId;
+    if (!operationId) {
+      throw new BadRequestError('operationId missing in route');
+    }
+    const [operation] = await db.getOperations(locals.tenantId, { assetId, id: operationId });
+    if (!operation) {
+      throw new NotFoundError('Operation not found');
+    }
+
+    const updated = await db.updateOperation(locals.tenantId, assetId, operationId, request, [
+      OobOperationStatusCode.Created,
+    ]);
+    if (!updated) {
+      throw new BadRequestError('Only operations not yet acknowledged can be cancelled');
+    }
+
+    await dispatchEvent({
+      id: new LongObjectId().toHexString(),
+      tenantId: locals.tenantId,
+      type: EventTypes.OobOperationUpdate,
+      ...locals.eventSource,
+      targetType: EventIdTypes.Asset,
+      targetId: assetId,
+      data: { operation, request },
+    });
+    res.sendStatus(204);
+  }),
+);
+
+outOfBandRouter.get(
+  '/assets/:assetId/operations/:operationId/link',
+  authenticate(),
+  handle<AuthenticateLocals>(async ({ req, res, db, locals, fileApi }) => {
+    const assetId = req.params.assetId;
+    if (!assetId) {
+      throw new BadRequestError('assetId missing in route');
+    }
+    const operationId = req.params.operationId;
+    if (!operationId) {
+      throw new BadRequestError('operationId missing in route');
+    }
+    const [operation] = await db.getOperations(locals.tenantId, { assetId, id: operationId });
+    if (!operation) {
+      throw new NotFoundError('Operation not found');
+    }
+
+    if (operation.name !== OobOperationName.SendFiles) {
+      throw new BadRequestError('This operation does not support file transfer');
+    }
+    if (operation.status !== OobOperationStatusCode.Success) {
+      throw new BadRequestError(
+        'This operation has not completed successfully so there are no files',
+      );
+    }
+
+    // Sanitise the date removing invalid characters for windows filenames.
+    const date = operation.id.getTimestamp().toISOString().split(':').join('-').split('.')[0];
+    // Currently only send files is supported and it always sends zips.
+    const filename = `${operation.name}-${operation.assetId}-${date}.zip`;
+    res.json(
+      await fileApi.getFileLink(`${locals.tenantId}/${operation.id.toHexString()}`, filename),
+    );
   }),
 );

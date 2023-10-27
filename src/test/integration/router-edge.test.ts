@@ -186,7 +186,7 @@ describe('Edge Router tests', () => {
         parameters: {
           paths: ['/var/lib/datav'],
           method: 'PUT',
-          destination: `https://s3/${operationId}`,
+          destination: `https://s3/tenant-a/${operationId}`,
         },
       },
     ]);
