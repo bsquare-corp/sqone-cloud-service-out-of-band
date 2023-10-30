@@ -3,6 +3,7 @@ import {
   OobEdgeOperationUpdate,
   OobOperationName,
   OobOperationStatusCode,
+  SendFilesKnownPath,
 } from '@bsquare/companion-common';
 import { exchangeSystemToken } from '@bsquare/companion-service-common';
 import { expect } from 'chai';
@@ -176,7 +177,7 @@ describe('Edge Router tests', () => {
     const token = await oobApi.db.createAsset('tenant-a', 'asset-a');
     const operationId = await oobApi.db.createOperation('tenant-a', 'asset-a', {
       name: OobOperationName.SendFiles,
-      parameters: { paths: ['/var/lib/datav'] },
+      parameters: { paths: ['/var/lib/datav'], knownPaths: [SendFilesKnownPath.Logs] },
     });
 
     expect(await getEdgeOperations(token, 'boot-a')).to.deep.equal([
@@ -185,6 +186,7 @@ describe('Edge Router tests', () => {
         name: OobOperationName.SendFiles,
         parameters: {
           paths: ['/var/lib/datav'],
+          knownPaths: [SendFilesKnownPath.Logs],
           method: 'PUT',
           destination: `https://s3/tenant-a/${operationId}`,
         },

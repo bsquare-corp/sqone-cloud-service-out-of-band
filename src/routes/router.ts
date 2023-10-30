@@ -97,6 +97,7 @@ outOfBandRouter.get(
   }),
 );
 
+// TODO On operation creation push message to device to kick OOB.
 outOfBandRouter.post(
   '/assets/:assetId/operations',
   authenticate('OutOfBand.Manage'),
