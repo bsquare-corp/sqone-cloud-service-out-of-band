@@ -27,6 +27,15 @@ export const CRON_TENANT_AUGMENT_INTERVAL = 5 * 60;
 // Timeout in seconds when the job can be considered unresponsive.
 export const CRON_TENANT_AUGMENT_TIMEOUT = 2 * 60;
 
+export const CRON_OPERATION_CLEANUP_NAME = 'operation_cleanup';
+export const CRON_OPERATION_CLEANUP_INTERVAL = 7 * 24 * 3600; // Weekly
+export const CRON_OPERATION_CLEANUP_TIMEOUT = 2 * 60;
+export const OPERATION_TIMEOUT_MAX_AGE_DAYS = getNumberEnv('OPERATION_TIMEOUT_MAX_AGE_DAYS', 4 * 7);
+export const OPERATION_DELETE_MAX_AGE_DAYS = getNumberEnv(
+  'OPERATION_DELETE_MAX_AGE_DAYS',
+  3 * 4 * 7,
+);
+
 export const SERVICE_EVENT_ID = 'oob';
 
 export const OOB_STREAM_ID = getEnv('OOB_STREAM_ID');

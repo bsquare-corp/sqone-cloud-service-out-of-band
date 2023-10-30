@@ -68,8 +68,9 @@ export const oobApi = OutOfBandServer.createDummy(
     abortUpload: () => {
       throw new Error('not implemented');
     },
-    deleteFile: () => {
-      throw new Error('not implemented');
+    deleteFile: (fileId) => {
+      serviceEvents.emit('deleteFile', fileId);
+      return Promise.resolve();
     },
     uploadStream: () => {
       throw new Error('not implemented');

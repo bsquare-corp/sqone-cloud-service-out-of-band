@@ -27,12 +27,17 @@ import { execute } from 'proper-job';
 import {
   API_HOST,
   CRON_ENABLED,
+  CRON_OPERATION_CLEANUP_INTERVAL,
+  CRON_OPERATION_CLEANUP_NAME,
+  CRON_OPERATION_CLEANUP_TIMEOUT,
   CRON_PREFIX,
   CRON_TENANT_AUGMENT_INTERVAL,
   CRON_TENANT_AUGMENT_NAME,
   CRON_TENANT_AUGMENT_TIMEOUT,
   OOB_BUCKET,
   OOB_STREAM_ID,
+  OPERATION_DELETE_MAX_AGE_DAYS,
+  OPERATION_TIMEOUT_MAX_AGE_DAYS,
   RDS_DATABASE,
   RDS_HOSTNAME,
   RDS_PASSWORD,
@@ -174,8 +179,8 @@ export class OutOfBandServer extends NodeServer {
   }
 
   protected async configure(): Promise<void> {
-    // TODO Cron to ensure all assets still exist and clean up ones that don't.
-    // TODO Cron to delete and fail operations older than X.
+    // TODO Cron to ensure all assets still exist and clean up ones that don't. Should be run rarely, weekly?
+    // TODO Cron to delete and fail operations older than X (from config).
     await this.db.connect();
 
     const dispatchEvent: RaiseEventCallback = (event) => this.eventQueue.write(event);
@@ -206,6 +211,43 @@ export class OutOfBandServer extends NodeServer {
         timeout: CRON_TENANT_AUGMENT_TIMEOUT,
         callback: (checkpoint) => this.createDefaultSubscriptions(checkpoint),
       });
+      await this.cron.registerJob({
+        name: CRON_OPERATION_CLEANUP_NAME,
+        interval: CRON_OPERATION_CLEANUP_INTERVAL,
+        timeout: CRON_OPERATION_CLEANUP_TIMEOUT,
+        callback: async (checkpoint) => {
+          // First timeout any operations, deleting files if necessary.
+          const timeoutDateCutoff = new Date();
+          timeoutDateCutoff.setDate(timeoutDateCutoff.getDate() - OPERATION_TIMEOUT_MAX_AGE_DAYS);
+          const timeoutIdCutoff = new LongObjectId(timeoutDateCutoff);
+          await this.cleanupOperations(
+            undefined,
+            {
+              id: { max: timeoutIdCutoff.toHexString() },
+              status: IN_PROGRESS_OPERATION_STATUSES,
+            },
+            checkpoint,
+          );
+
+          // Now cleanup and delete any completed operations that are too old.
+          const deleteDateCutoff = new Date();
+          deleteDateCutoff.setDate(deleteDateCutoff.getDate() - OPERATION_DELETE_MAX_AGE_DAYS);
+          const deleteIdCutoff = new LongObjectId(deleteDateCutoff);
+          await this.cleanupOperations(
+            undefined,
+            {
+              id: { max: deleteIdCutoff.toHexString() },
+              status: [
+                OobOperationStatusCode.Success,
+                OobOperationStatusCode.Failed,
+                OobOperationStatusCode.Cancelled,
+              ],
+            },
+            checkpoint,
+            true,
+          );
+        },
+      });
     }
   }
 
@@ -227,11 +269,14 @@ export class OutOfBandServer extends NodeServer {
       }
       return;
     } else if (event.type === EventTypes.AssetDelete) {
+      // There is a cap on execution time but it doesn't seem likely this will be met.
+      // If it were the event would be re-processed repeatedly until all the operations were gone
+      // or the event times out then and the cron catches it.
       await this.deleteAsset(event.tenantId, event.targetId, () => Promise.resolve());
     }
   }
 
-  protected async deleteAsset(
+  public async deleteAsset(
     tenantId: string,
     assetId: string,
     checkpoint: CheckpointCallback,
@@ -245,6 +290,7 @@ export class OutOfBandServer extends NodeServer {
     tenantId: string | undefined,
     options: OobOperationRequest,
     checkpoint: CheckpointCallback,
+    deleteOperation?: boolean,
   ): Promise<void> {
     // TODO Consider parallelisation of this if scalability becomes an issue.
     // As of the time of writing there's no plans to automate execution of out of band operations.
@@ -272,6 +318,9 @@ export class OutOfBandServer extends NodeServer {
         });
       }
       await this.cleanupOperation(operation);
+      if (deleteOperation) {
+        await this.db.deleteOperation(operation.id);
+      }
       await checkpoint();
     }
   }

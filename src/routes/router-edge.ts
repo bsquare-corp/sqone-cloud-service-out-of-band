@@ -184,7 +184,6 @@ outOfBandEdgeRouter.get(
       sortBy: 'id',
       // Oldest first
       sortDirection: 'ASC',
-      // TODO Check which states are right.
       status: {
         equals: [
           OobOperationStatusCode.Created,
