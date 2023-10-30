@@ -282,7 +282,10 @@ outOfBandEdgeRouter.get(
             return {
               ...base,
               parameters: {
-                ...(operation.parameters as Pick<OobEdgeOperationSendFilesParameters, 'paths'>),
+                ...(operation.parameters as Pick<
+                  OobEdgeOperationSendFilesParameters,
+                  'paths' | 'knownPaths'
+                >),
                 method: 'PUT',
                 destination: await fileApi.getFileUploadLink(`${operation.tenantId}/${base.id}`),
               },
