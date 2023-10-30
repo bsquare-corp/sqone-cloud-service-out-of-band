@@ -9,8 +9,8 @@
     "build": "tsc && ./copy.sh",
     "start": "node dist/index.js",
     "test:cleanup": "docker-compose -f dev/test/docker-compose.yml down",
-    "test:integration": "docker-compose -f dev/test/docker-compose.yml pull && nyc mocha --exit --timeout 120000 dist/test/integration-wrapper --recursive dist/test/integration",
-    "test": "yarn test:cleanup && yarn test:integration",
+    "test:run": "docker-compose -f dev/test/docker-compose.yml pull && nyc mocha --exit --timeout 120000 dist/test/integration-wrapper --recursive dist/test/tests",
+    "test": "yarn test:cleanup && yarn test:run",
     "clean": "rm -rf dist/* *.tsbuildinfo .schemabuildinfo",
     "lint": "eslint --ext .ts src && prettier --check '**/*.{json,md,yaml,yml}'",
     "fix": "eslint --fix --ext .ts src && prettier --check --write '**/*.{json,md,yaml,yml}'"
