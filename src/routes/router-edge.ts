@@ -33,7 +33,7 @@ import {
 import { parseOobHeader } from '../oob-header-parser';
 import { handle, RaiseEventCallback } from './handle';
 
-const logger = getLogger('companion-common-service-out-of-band.router');
+const logger = getLogger('companion-common-service-out-of-band.router-edge');
 
 const SCHEMA_PATH = getSchemaPath();
 const EDGE_UPDATE_OPERATION_VALIDATOR = Validator.loadSync<OobEdgeOperationUpdate>(

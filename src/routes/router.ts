@@ -1,4 +1,10 @@
-import { BadRequestError, LongObjectId, NotFoundError, Validator } from '@bsquare/base-service';
+import {
+  BadRequestError,
+  getLogger,
+  LongObjectId,
+  NotFoundError,
+  Validator,
+} from '@bsquare/base-service';
 import {
   EventIdTypes,
   EventTypes,
@@ -12,14 +18,16 @@ import {
   OobOperationStatusCode,
   OobOperationUpdateRequest,
 } from '@bsquare/companion-common';
-import { authenticate, AuthenticateLocals } from '@bsquare/companion-service-common';
+import { authenticate, AuthenticateLocals, internalFetch } from '@bsquare/companion-service-common';
 import { Router } from 'express';
-import { MAX_PENDING_OPERATIONS_PER_ASSET } from '../config';
+import { MAX_PENDING_OPERATIONS_PER_ASSET, SERVICE_EVENT_ID } from '../config';
 import { IN_PROGRESS_OPERATION_STATUSES } from '../database';
 import { handle } from './handle';
 import { outOfBandEdgeRouter } from './router-edge';
 
 export const outOfBandRouter = Router();
+
+const logger = getLogger('companion-common-service-out-of-band.router');
 
 const SCHEMA_PATH = getSchemaPath();
 const ASSET_REQUEST_VALIDATOR = Validator.loadSync<OobAssetRequest>('OobAssetRequest', SCHEMA_PATH);
@@ -97,7 +105,6 @@ outOfBandRouter.get(
   }),
 );
 
-// TODO On operation creation push message to device to kick OOB.
 outOfBandRouter.post(
   '/assets/:assetId/operations',
   authenticate('OutOfBand.Manage'),
@@ -128,6 +135,26 @@ outOfBandRouter.post(
       targetId: assetId,
       data: { id, request },
     });
+    try {
+      await internalFetch({
+        method: 'POST',
+        tenantId: locals.tenantId,
+        // 26406 = Out-Of-Band
+        url: `/v1/api/pusher/ipso/asset/${assetId}/0/0/26406/0`,
+        serviceId: SERVICE_EVENT_ID,
+        sourceType: EventIdTypes.Service,
+        sourceId: SERVICE_EVENT_ID,
+        body: {
+          data: {
+            // 27355 = Poll immediately if value is true
+            ['27355']: true,
+          },
+        },
+      });
+    } catch (err) {
+      // Non-fatal, device should poll periodially.
+      logger.warn('Failed to trigger immediate polling', err);
+    }
     res.status(201).json(id);
   }),
 );
