@@ -158,9 +158,6 @@ outOfBandEdgeRouter.patch(
     if (!operation) {
       throw new NotFoundError('Operation not found');
     }
-    if (operation.status === OobOperationStatusCode.Created) {
-      update;
-    }
     await updateOperation({
       db,
       dispatchEvent,
