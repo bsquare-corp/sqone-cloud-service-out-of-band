@@ -133,6 +133,13 @@ export class OutOfBandDb extends Database {
     );
   }
 
+  public async deleteOperation(id: LongObjectId): Promise<void> {
+    await super.query('DELETE FROM `oob_operations` WHERE `id` = ?', [id.toBSON()], {
+      checkTenant: false,
+      transaction: false,
+    });
+  }
+
   public async getOperations(
     tenantId: string | undefined,
     options: OobOperationRequest,
