@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS `oob_assets` (
   `tenant_id` VARCHAR(32) NOT NULL,
   `asset_id` VARCHAR(255) NOT NULL,
   `boot_id` TEXT NULL DEFAULT NULL,
-  `last_active` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `last_active` TIMESTAMP NULL DEFAULT NULL,
   `secret_hash` TEXT NOT NULL,
 
   PRIMARY KEY (`tenant_id`, `asset_id`),
