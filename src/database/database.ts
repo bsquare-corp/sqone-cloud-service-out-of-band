@@ -31,7 +31,7 @@ export interface OobAssetDb {
   tenantId: string;
   assetId: string;
   bootId?: string;
-  lastActive: Date;
+  lastActive?: Date;
   secretHash: string;
 }
 

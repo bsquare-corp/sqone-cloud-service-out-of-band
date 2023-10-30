@@ -69,7 +69,7 @@ outOfBandRouter.get(
     const assets: OobAsset[] = dbAssets.map((asset) => ({
       assetId: asset.assetId,
       ...(asset.bootId ? { bootId: asset.bootId } : {}),
-      lastActive: asset.lastActive.toISOString(),
+      ...(asset.lastActive ? { lastActive: asset.lastActive.toISOString() } : {}),
     }));
     res.json(assets);
   }),
