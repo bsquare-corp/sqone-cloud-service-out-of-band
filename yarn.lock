@@ -211,10 +211,10 @@
   resolved "https://bsquare-753989949864.d.codeartifact.us-west-2.amazonaws.com/npm/bsquare/@bsquare/companion-common/-/companion-common-5.35.2.tgz#0606ef28adb2dd258a2418c0de7981a2452a9f82"
   integrity sha512-n3FdrYgqLgbAIWo+fR89StKwpo1LkM5okUGZMkVcbOycAAjj77AUrvW1U6DiysDC8Qn5Ea7KJLWcDteEvPQgOw==
 
-"@bsquare/companion-common@^5.37.5":
-  version "5.37.5"
-  resolved "https://bsquare-753989949864.d.codeartifact.us-west-2.amazonaws.com/npm/bsquare/@bsquare/companion-common/-/companion-common-5.37.5.tgz#1948d88b53bd57dd8925acdcce38e25a3915ec08"
-  integrity sha512-GF4VMnR8EBsXG8tBK7+7vsgIYvJsKcX6B4J7r//nj565Vve7sU9rSvUOI6WiUOR1W5Qn4+CIAdp4j248Zw9y0g==
+"@bsquare/companion-common@^5.37.8":
+  version "5.37.8"
+  resolved "https://bsquare-753989949864.d.codeartifact.us-west-2.amazonaws.com/npm/bsquare/@bsquare/companion-common/-/companion-common-5.37.8.tgz#d10f6aac90260c6e8e8fbf4d8fa59c5f0298d875"
+  integrity sha512-3nRvI3T8v+SPJbaQxdW9Jdftn339kZD2jNO+x5NR8TfWpTrbx97vEqv139JxqQUqpE98YMP44SvvJagVaJDwHQ==
 
 "@bsquare/companion-service-common@^5.3.0":
   version "5.3.0"

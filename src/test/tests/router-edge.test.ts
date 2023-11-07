@@ -177,7 +177,7 @@ describe('Edge Router tests', () => {
     const token = await oobApi.db.createAsset('tenant-a', 'asset-a');
     const operationId = await oobApi.db.createOperation('tenant-a', 'asset-a', {
       name: OobOperationName.SendFiles,
-      parameters: { paths: ['/var/lib/datav'], knownPaths: [SendFilesKnownPath.Logs] },
+      parameters: { paths: ['/var/lib/datav'], knownPaths: [SendFilesKnownPath.SystemConfig] },
     });
 
     expect(await getEdgeOperations(token, 'boot-a')).to.deep.equal([
@@ -186,7 +186,7 @@ describe('Edge Router tests', () => {
         name: OobOperationName.SendFiles,
         parameters: {
           paths: ['/var/lib/datav'],
-          knownPaths: [SendFilesKnownPath.Logs],
+          knownPaths: [SendFilesKnownPath.SystemConfig],
           method: 'PUT',
           destination: `https://s3/tenant-a/${operationId}`,
         },
