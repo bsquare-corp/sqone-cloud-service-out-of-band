@@ -41,3 +41,5 @@ export const SERVICE_EVENT_ID = 'oob';
 export const OOB_STREAM_ID = getEnv('OOB_STREAM_ID');
 export const API_HOST = getEnv('API_HOST');
 export const WAIT_FOR_EVENTS_SERVICE = getEnvBoolean('WAIT_FOR_EVENTS_SERVICE', true);
+
+export const UPLOAD_TOKEN_BYTES = getNumberEnv('UPLOAD_TOKEN_BYTES', 16);

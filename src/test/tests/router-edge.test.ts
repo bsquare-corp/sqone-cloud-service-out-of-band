@@ -179,6 +179,9 @@ describe('Edge Router tests', () => {
       name: OobOperationName.SendFiles,
       parameters: { paths: ['/var/lib/datav'], knownPaths: [SendFilesKnownPath.SystemConfig] },
     });
+    const [dbOperation] = await oobApi.db.getOperations(undefined, { id: operationId });
+
+    const expectedUrl = `http://localhost:4468/v1/api/oob/edge/operations/${operationId}/upload?uploadToken=${dbOperation?.uploadToken}`;
 
     expect(await getEdgeOperations(token, 'boot-a')).to.deep.equal([
       {
@@ -188,7 +191,7 @@ describe('Edge Router tests', () => {
           paths: ['/var/lib/datav'],
           knownPaths: [SendFilesKnownPath.SystemConfig],
           method: 'PUT',
-          destination: `https://s3/tenant-a/${operationId}`,
+          destination: expectedUrl,
         },
       },
     ]);
@@ -201,6 +204,20 @@ describe('Edge Router tests', () => {
       status: OobOperationStatusCode.Pending,
       tries: 1,
     });
+
+    // This host:port is different from the above because in prod all requests go through API_HOST but in testing that proxy isn't used.
+    const response = await Fetch(
+      `${OOB_API_URI}/v1/api/oob/edge/operations/${operationId}/upload?uploadToken=${dbOperation?.uploadToken}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/zip' },
+        body: Buffer.from([1, 2, 3, 4]),
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`Upload failed: ${await response.text()}`);
+    }
+
     await updateEdgeOperation(token, operationId, {
       status: OobOperationStatusCode.InProgress,
       progress: { position: 0, size: 2 },

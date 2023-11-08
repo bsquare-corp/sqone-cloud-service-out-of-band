@@ -7,6 +7,7 @@ import {
 import {
   OobAssetRequest,
   OobOperationCreateRequest,
+  OobOperationName,
   OobOperationRequest,
   OobOperationStatusCode,
 } from '@bsquare/companion-common';
@@ -24,6 +25,7 @@ import {
 import * as Argon2 from 'argon2';
 import * as MySQL from 'mysql2/promise';
 import Path from 'path';
+import { UPLOAD_TOKEN_BYTES } from '../config';
 
 const TOKEN_SECRET_LENGTH_BYTES = 32;
 
@@ -62,6 +64,7 @@ export interface OobOperationDb<T = unknown> {
   additionalDetails?: string;
   parameters?: T;
   progress?: { position: number; size?: number };
+  uploadToken?: string;
 }
 
 const OPERATION_FILTER_MAP: SqlFilterMap = {
@@ -84,10 +87,16 @@ export const IN_PROGRESS_OPERATION_STATUSES = [
   OobOperationStatusCode.InProgress,
 ];
 
+async function generateUploadToken(): Promise<string> {
+  const buffer = await generateRandomBytes(UPLOAD_TOKEN_BYTES);
+  return buffer.toString('hex');
+}
+
 export class OutOfBandDb extends Database {
   public override async connect(): Promise<void> {
     await super.connect([]);
     await this.applyUpdate('oob_001_init', '001_init.sql');
+    await this.applyUpdate('oob_002_operation_upload_token', '002_operation_upload_token.sql');
   }
 
   public override async applyUpdate(patchName: string, file: string): Promise<void> {
@@ -184,6 +193,9 @@ export class OutOfBandDb extends Database {
       { name: 'id', value: id.toBSON() },
       { name: 'name', value: request.name },
       { name: 'status', value: OobOperationStatusCode.Created },
+      ...(request.name === OobOperationName.SendFiles
+        ? [{ name: 'upload_token', value: await generateUploadToken() }]
+        : []),
       ...(request.parameters !== undefined
         ? [{ name: 'parameters', value: JSON.stringify(request.parameters) }]
         : []),

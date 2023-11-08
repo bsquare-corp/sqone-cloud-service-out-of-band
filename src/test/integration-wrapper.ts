@@ -17,11 +17,14 @@ process.env.CRON_ENABLED = 'false';
 
 process.env.OOB_BUCKET = 'oob';
 
+import { createStreamPromise, PipeBuffer } from '@bsquare/base-service';
 import { PipelineEvent } from '@bsquare/companion-common';
+import { expect } from 'chai';
 import { EventEmitter } from 'events';
 import { after, before } from 'mocha';
 
 // eslint-disable-next-line import/order
+import type { Stream } from 'stream';
 import { OutOfBandServer } from '../';
 import { startServices, stopServices } from './services-setup';
 
@@ -55,7 +58,6 @@ export const oobApi = OutOfBandServer.createDummy(
   },
   {
     getFileLink: (fileId: string) => Promise.resolve(`https://s3/${fileId}`),
-    getFileUploadLink: (fileId: string) => Promise.resolve(`https://s3/${fileId}`),
     startUpload: () => {
       throw new Error('not implemented');
     },
@@ -72,8 +74,12 @@ export const oobApi = OutOfBandServer.createDummy(
       serviceEvents.emit('deleteFile', fileId);
       return Promise.resolve();
     },
-    uploadStream: () => {
-      throw new Error('not implemented');
+    uploadStream: async (fileId: string, stream: Stream) => {
+      expect(fileId).to.be.a('string');
+      const pipeBuffer = new PipeBuffer();
+      await createStreamPromise(stream.pipe(pipeBuffer));
+      const buffer = pipeBuffer.createBuffer();
+      expect(buffer.toString('hex')).to.equal('01020304');
     },
     close: () => Promise.resolve(),
   },

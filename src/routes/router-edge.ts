@@ -3,6 +3,7 @@ import {
   getLogger,
   LongObjectId,
   NotFoundError,
+  UnauthorizedError,
   Validator,
 } from '@bsquare/base-service';
 import {
@@ -20,9 +21,10 @@ import {
   OobOperationStatusCode,
 } from '@bsquare/companion-common';
 import { EventSource } from '@bsquare/companion-service-common';
+import Crypto from 'crypto';
 import { Router } from 'express';
 import { LRUCache } from 'lru-cache';
-import { MAX_OPERATION_TRIES, TOKEN_CACHE_MAX, TOKEN_CACHE_TTL_MS } from '../config';
+import { API_HOST, MAX_OPERATION_TRIES, TOKEN_CACHE_MAX, TOKEN_CACHE_TTL_MS } from '../config';
 import {
   IN_PROGRESS_OPERATION_STATUSES,
   OobAssetDb,
@@ -142,6 +144,50 @@ async function updateOperation(options: {
   }
 }
 
+// This is a wrapper around s3.uploadStream because the Edge wants to upload a file without
+// fully knowing the length so it needs to know about AWS specific multi-part uploads
+// or it can be proxied and handled here. Considering that it should be low-throughout
+// it's going to be done here but this may need to be reevaluated in future if OOB operations
+// are executed in bulk.
+outOfBandEdgeRouter.put(
+  '/operations/:operationId/upload',
+  handle(async ({ req, res, db, fileApi }) => {
+    const uploadToken = req.query.uploadToken;
+    if (typeof uploadToken !== 'string') {
+      throw new BadRequestError('Missing uploadToken');
+    }
+    const operationId = req.params.operationId;
+    if (typeof operationId !== 'string') {
+      throw new BadRequestError('Invalid operationId');
+    }
+    const [operation] = await db.getOperations(undefined, {
+      id: operationId,
+    });
+    if (!operation) {
+      throw new NotFoundError('Operation not found');
+    }
+    if (!IN_PROGRESS_OPERATION_STATUSES.includes(operation.status)) {
+      throw new BadRequestError('Cannot upload a file for a completed operation');
+    }
+    if (!operation.uploadToken) {
+      throw new BadRequestError('This operation does not support file upload');
+    }
+    // Make the buffers the same length which is required for timingSafeEqual and then
+    // use that function to avoid timing attacks brute-forcing the upload token.
+    const realTokenBuffer = Buffer.from(operation.uploadToken);
+    const userTokenBuffer = Buffer.from(
+      uploadToken.slice(0, operation.uploadToken.length).padEnd(operation.uploadToken.length, '0'),
+    );
+    if (!Crypto.timingSafeEqual(realTokenBuffer, userTokenBuffer)) {
+      throw new UnauthorizedError('Invalid upload token');
+    }
+
+    await fileApi.uploadStream(`${operation.tenantId}/${operation.id.toHexString()}`, req);
+
+    res.sendStatus(204);
+  }),
+);
+
 outOfBandEdgeRouter.patch(
   '/operations/:operationId',
   authenticateAsset,
@@ -175,7 +221,7 @@ outOfBandEdgeRouter.patch(
 outOfBandEdgeRouter.get(
   '/operations',
   authenticateAsset,
-  handle<AssetLocals>(async ({ res, db, locals, fileApi, dispatchEvent }) => {
+  handle<AssetLocals>(async ({ res, db, locals, dispatchEvent }) => {
     let operations = await db.getOperations(locals.tenantId, {
       assetId: locals.asset.assetId,
       sortBy: 'id',
@@ -257,52 +303,49 @@ outOfBandEdgeRouter.get(
     );
 
     // Map each raw database operation to an operation structure the device is expecting.
-    // Allow it to return promises for generating an upload link.
-    const edgeOperationPromises: Array<Promise<OobEdgeOperation | undefined>> = operations.map(
-      async (operation) => {
-        const base = {
-          id: operation.id.toHexString(),
-          name: operation.name,
-          // If the status is created then do not send it to the device. It doesn't understand this status, its equivalent is no status.
-          ...(operation.status === OobOperationStatusCode.Created
-            ? {}
-            : { status: operation.status }),
-        };
+    const edgeOperations: Array<OobEdgeOperation | undefined> = operations.map((operation) => {
+      const base = {
+        id: operation.id.toHexString(),
+        name: operation.name,
+        // If the status is created then do not send it to the device. It doesn't understand this status, its equivalent is no status.
+        ...(operation.status === OobOperationStatusCode.Created
+          ? {}
+          : { status: operation.status }),
+      };
 
-        switch (operation.name) {
-          case OobOperationName.SendFiles: {
-            // This should never be the case because the service should exit on startup.
-            if (!fileApi.getFileUploadLink) {
-              logger.error('getFileUploadLink not defined');
-              return undefined;
-            }
-            return {
-              ...base,
-              parameters: {
-                ...(operation.parameters as Pick<
-                  OobEdgeOperationSendFilesParameters,
-                  'paths' | 'knownPaths'
-                >),
-                method: 'PUT',
-                destination: await fileApi.getFileUploadLink(`${operation.tenantId}/${base.id}`),
-              },
-            } as OobEdgeOperationSendFiles;
-          }
-          case OobOperationName.RestartServices:
-            return {
-              ...base,
-              parameters: operation.parameters as OobEdgeOperationRestartServicesParameters,
-            } as OobEdgeOperationRestartServices;
-          case OobOperationName.Reboot:
-            return base as OobEdgeOperationReboot;
-          default:
-            logger.warn('Unhandled operation type for device', operation);
+      switch (operation.name) {
+        case OobOperationName.SendFiles: {
+          if (!operation.uploadToken) {
+            logger.error('operation missing uploadToken', operation);
             return undefined;
+          }
+          return {
+            ...base,
+            parameters: {
+              ...(operation.parameters as Pick<
+                OobEdgeOperationSendFilesParameters,
+                'paths' | 'knownPaths'
+              >),
+              method: 'PUT',
+              destination: `${API_HOST}/v1/api/oob/edge/operations/${operation.id.toHexString()}/upload?uploadToken=${
+                operation.uploadToken
+              }`,
+            },
+          } as OobEdgeOperationSendFiles;
         }
-      },
-    );
+        case OobOperationName.RestartServices:
+          return {
+            ...base,
+            parameters: operation.parameters as OobEdgeOperationRestartServicesParameters,
+          } as OobEdgeOperationRestartServices;
+        case OobOperationName.Reboot:
+          return base as OobEdgeOperationReboot;
+        default:
+          logger.warn('Unhandled operation type for device', operation);
+          return undefined;
+      }
+    });
 
-    const edgeOperations = await Promise.all(edgeOperationPromises);
     res.json(edgeOperations.filter((edgeOperation) => edgeOperation !== undefined));
   }),
 );
