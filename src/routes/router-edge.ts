@@ -125,7 +125,10 @@ async function updateOperation(options: {
       ...options.eventSource,
       targetType: EventIdTypes.Asset,
       targetId: options.operation.assetId,
-      data: options.update,
+      data: {
+        id: options.operation.id.toHexString(),
+        ...options.update,
+      },
     });
   } else {
     if (IN_PROGRESS_OPERATION_STATUSES.includes(options.update.status)) {

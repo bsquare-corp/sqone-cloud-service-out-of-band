@@ -191,7 +191,7 @@ outOfBandRouter.patch(
       ...locals.eventSource,
       targetType: EventIdTypes.Asset,
       targetId: assetId,
-      data: { operation, request },
+      data: { id: operation.id.toHexString(), operation, request },
     });
     res.sendStatus(204);
   }),
