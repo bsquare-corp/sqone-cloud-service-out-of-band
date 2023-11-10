@@ -127,7 +127,7 @@ async function updateOperation(options: {
       targetId: options.operation.assetId,
       data: {
         id: options.operation.id.toHexString(),
-        ...options.update,
+        request: options.update,
       },
     });
   } else {
