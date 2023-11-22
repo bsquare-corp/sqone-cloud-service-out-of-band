@@ -1,6 +1,6 @@
 {
   "name": "@bsquare/companion-common-service-out-of-band",
-  "version": "0.1.0",
+  "version": "2.7.0",
   "description": "The service for managing out-of-band messaging",
   "main": "dist/index.js",
   "author": "BSquare EMEA",
